@@ -1,5 +1,6 @@
 ﻿
 
+using System;
 using ConVar;
 using System.Collections.Generic;
 using Network;
@@ -11,18 +12,18 @@ using System.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("AutoEmojis", "YaMang -w-", "1.0.2")]
+    [Info("AutoEmojis", "YaMang -w-", "1.0.3")]
     [Description("Automatically replaces configurable words with Emojis")]
     class AutoEmojis : RustPlugin
     {
         [PluginReference]
-        Plugin BetterChat;
+        Plugin BetterChat, IQChat;
 
         #region Hook
 
         void OnServerInitialized(bool initial)
         {
-            if (BetterChat != null)
+            if (BetterChat != null || IQChat != null)
             {
                 Unsubscribe(nameof(OnPlayerChat));
             }
@@ -102,6 +103,12 @@ namespace Oxide.Plugins
             return containMsg.Count > 0 ? message : null;
         }
 
+        Object OnMessageIQChat(String message)
+        {
+            String msg = HandleMessage(message);
+            return string.IsNullOrEmpty(msg) ? message : msg;
+        }
+        
         private object OnPlayerChat(BasePlayer player, string message, Chat.ChatChannel channel)
         {
             if (BetterChat == null)
@@ -126,7 +133,8 @@ namespace Oxide.Plugins
                             if (null != inUser) sendUserList.Add(inUser);
                         }
 
-                        if (sendUserList.Count > 0) player.SendConsoleCommand("chat.add2", new object[] { channel, player.UserIDString, msg, "[TEAM] " + player.displayName, "#5af" });
+                        if (sendUserList.Count > 0) 
+                            player.SendConsoleCommand("chat.add2", new object[] { channel, player.UserIDString, msg, "[TEAM] " + player.displayName, "#5af" });
                     }
                     else
                     {
