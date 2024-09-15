@@ -7,14 +7,11 @@ using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
 using Newtonsoft.Json;
 using System.IO;
-using System;
-using UnityEngine;
-using static CoverageQueries.Query;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("AutoEmojis", "YaMang -w-", "1.0.1")]
+    [Info("AutoEmojis", "YaMang -w-", "1.0.2")]
     [Description("Automatically replaces configurable words with Emojis")]
     class AutoEmojis : RustPlugin
     {
@@ -75,46 +72,36 @@ namespace Oxide.Plugins
         }
         private string HandleMessage(string message)
         {
-            bool find = false;
+            if (string.IsNullOrEmpty(message)) return null;
 
             Dictionary<string, string> containMsg = new Dictionary<string, string>();
-
-            foreach (var item in _config.generalSettings.itemsEmoji)
+            
+            void ProcessItems(Dictionary<string, string> items, bool custom = false)
             {
-                if (message.Contains(item.Key))
+                foreach (var item in items)
                 {
-                    if (message.Contains(":")) break;
-
-                    if (!containMsg.ContainsKey(item.Key))
-                        containMsg.Add(item.Key, item.Value);
-
-                    find = true;
+                    if (message.Contains(item.Key))
+                    {
+                        if (message.Contains(":")) continue;
+                        if (!containMsg.ContainsKey(item.Key))
+                            containMsg.Add(item.Key, custom ? item.Key : item.Value);
+                    }
                 }
             }
 
-            foreach (var item in _config.generalSettings.customEmoji)
-            {
-                if (message.Contains(item))
-                {
-                    if (message.Contains(":")) break;
-                    if (!containMsg.ContainsKey(item))
-                        containMsg.Add(item, item);
-                    find = true;
-                    //break;
-                }
-            }
+            ProcessItems(_config.generalSettings.itemsEmoji);
+
+            var customEmojiDict = _config.generalSettings.customEmoji.ToDictionary(emoji => emoji, emoji => emoji);
+            ProcessItems(customEmojiDict, true);
 
             foreach (var item in containMsg)
             {
                 message = message.Replace(item.Key, $":{item.Value}:");
             }
 
-            if (find)
-                return message;
-            else
-                return null;
-
+            return containMsg.Count > 0 ? message : null;
         }
+
         private object OnPlayerChat(BasePlayer player, string message, Chat.ChatChannel channel)
         {
             if (BetterChat == null)
